@@ -62,18 +62,23 @@ fn fail(err: impl Error, context: &str) -> ! {
 fn main() -> io::Result<()> {
     let mut args: Vec<String> = args().skip(1).collect();
     if args.len() == 0 {
-        eprintln!("usage: it-rust [itertool]")
+        eprintln!("usage: it [command]");
+        eprintln!("Recognized commands are:");
+        eprintln!("trim, trim_start, trim_end, to_uppercase, to_lowercase");
+        process::exit(1);
     }
 
     let itertool = match args.pop().unwrap().as_str() {
         "trim" => IterTool::Trim,
         "trim_start" => IterTool::TrimStart,
         "trim_end" => IterTool::TrimEnd,
-        "to_uppercase" => IterTool::ToUppercase,
-        "to_lowercase" => IterTool::ToLowercase,
+        "to_uppercase" | "uppercase" | "upper" => IterTool::ToUppercase,
+        "to_lowercase" | "lowercase" | "lower" => IterTool::ToLowercase,
 
         unrecognized => {
-            eprintln!("{}: Unknown command", unrecognized);
+            eprintln!("\x1b[1;31mError\x1b[0m: Unknown command: {}", unrecognized);
+            eprintln!("Recognized commands are:");
+            eprintln!("trim, trim_start, trim_end, to_uppercase, to_lowercase");
             process::exit(1);
         }
     };

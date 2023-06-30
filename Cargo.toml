@@ -10,4 +10,9 @@ edition = "2021"
 #itertools = "0.11.0"
 
 [profile.release]
-#lto = true
+debug = 1
+lto = true
+
+[[bin]]
+name = "it"
+path = "src/main.rs"
