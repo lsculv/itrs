@@ -1,10 +1,12 @@
-use std::env::args;
-use std::error::Error;
-#[allow(unused_imports)]
 use std::fs::File;
-use std::io::{self, stdin, stdout, BufRead, BufReader, BufWriter, Read, Write};
+use std::io::{self, stdout, BufRead, BufReader, BufWriter, Write};
 use std::process;
+use std::str::FromStr;
 
+use clap::{Arg, Command};
+use colored::Colorize;
+
+#[derive(Debug)]
 enum IterTool {
     Trim,
     TrimStart,
@@ -29,19 +31,49 @@ impl IterTool {
     }
 }
 
-fn run(file_handles: Vec<impl Read>, itertool: IterTool) -> io::Result<()> {
+impl FromStr for IterTool {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "trim" => Ok(IterTool::Trim),
+            "trim_start" => Ok(IterTool::TrimStart),
+            "trim_end" => Ok(IterTool::TrimEnd),
+            "to_uppercase" => Ok(IterTool::ToUppercase),
+            "to_lowercase" => Ok(IterTool::ToLowercase),
+            _ => Err(()),
+        }
+    }
+}
+
+fn run(config: Config) -> anyhow::Result<()> {
+    #[inline(always)]
+    fn make_reader(path: &str) -> anyhow::Result<Box<dyn BufRead>> {
+        match path {
+            "-" => Ok(Box::new(BufReader::new(io::stdin().lock()))),
+            _ => Ok(Box::new(BufReader::new(File::open(path)?))),
+        }
+    }
+
+    let mut readers: Vec<Box<dyn BufRead>> = Vec::with_capacity(config.files.len());
+    for file in config.files {
+        readers.push(make_reader(&file)?);
+    }
+
+    let command = config.command;
+
     let mut buf_stdout = BufWriter::new(stdout().lock());
     let mut buf = String::with_capacity(255);
 
-    for handle in file_handles {
-        let mut buf_file = BufReader::new(handle);
+    for mut reader in readers {
         loop {
-            let bytes = buf_file.read_line(&mut buf)?;
+            let bytes = reader.read_line(&mut buf)?;
             if bytes == 0 {
+                buf.clear();
                 break;
             }
-            write!(buf_stdout, "{}", itertool.apply_to(&buf))?;
-            if itertool.removes_newline() {
+            write!(buf_stdout, "{}", command.apply_to(&buf))?;
+            if command.removes_newline() {
                 writeln!(buf_stdout)?;
             }
 
@@ -53,55 +85,52 @@ fn run(file_handles: Vec<impl Read>, itertool: IterTool) -> io::Result<()> {
     Ok(())
 }
 
-#[allow(dead_code)]
-fn fail(err: impl Error, context: &str) -> ! {
-    eprintln!("{}: {}", context, err);
-    process::exit(1);
+#[derive(Debug)]
+struct Config {
+    files: Vec<String>,
+    command: IterTool,
 }
 
-fn main() -> io::Result<()> {
-    let mut args: Vec<String> = args().skip(1).collect();
-    if args.len() == 0 {
-        eprintln!("usage: it [command]");
-        eprintln!("Recognized commands are:");
-        eprintln!("trim, trim_start, trim_end, to_uppercase, to_lowercase");
+fn parse_args() -> anyhow::Result<Config> {
+    let matches = Command::new("it")
+        .version("0.1.0")
+        .author("Lucas Culverhouse")
+        .about("Provides command-line access to several useful Rust itertools and string methods")
+        .subcommand_required(true)
+        .arg(
+            Arg::new("files")
+                .value_name("FILE")
+                .help("Input file(s)")
+                .default_value("-")
+                .num_args(1..)
+                .global(true),
+        )
+        .subcommand(Command::new("trim"))
+        .subcommand(Command::new("trim_start").visible_alias("trim_left"))
+        .subcommand(Command::new("trim_end").visible_alias("trim_right"))
+        .subcommand(Command::new("to_uppercase").visible_aliases(["upper", "uppercase"]))
+        .subcommand(Command::new("to_lowercase").visible_aliases(["lower", "lowercase"]))
+        .get_matches();
+
+    let (subcommand, subargs) = matches
+        .subcommand()
+        .expect("subcommand should be required by clap");
+
+    let files: Vec<String> = subargs
+        .get_many("files")
+        .expect("files should at least contain STDIN")
+        .cloned()
+        .collect();
+
+    let command: IterTool =
+        IterTool::from_str(subcommand).expect("clap should catch invalid subcommands being passed");
+
+    Ok(Config { files, command })
+}
+
+fn main() {
+    if let Err(e) = parse_args().and_then(run) {
+        eprintln!("{} {}", "error:".bright_red(), e);
         process::exit(1);
     }
-
-    let itertool = match args.pop().unwrap().as_str() {
-        "trim" => IterTool::Trim,
-        "trim_start" => IterTool::TrimStart,
-        "trim_end" => IterTool::TrimEnd,
-        "to_uppercase" | "uppercase" | "upper" => IterTool::ToUppercase,
-        "to_lowercase" | "lowercase" | "lower" => IterTool::ToLowercase,
-
-        unrecognized => {
-            eprintln!("\x1b[1;31mError\x1b[0m: Unknown command: {}", unrecognized);
-            eprintln!("Recognized commands are:");
-            eprintln!("trim, trim_start, trim_end, to_uppercase, to_lowercase");
-            process::exit(1);
-        }
-    };
-
-    if let Some(file) = args.pop() {
-        let file_handle = File::open(file)?;
-        run(vec![file_handle], itertool)?
-    } else {
-        run(vec![stdin().lock()], itertool)?;
-    }
-
-    /*
-    if args.len() > 1 {
-        let file_handles: Vec<_> = args
-            .into_iter()
-            // PANIC: `unwrap` call never panics because we handle the error
-            // and exit the program early.
-            .map(|f| File::open(&f).map_err(|e| fail(e, &f)).unwrap())
-            .collect();
-        run(file_handles)?;
-    } else {
-    */
-    //}
-
-    Ok(())
 }
