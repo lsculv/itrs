@@ -158,7 +158,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "it-rust"
+name = "it-rs"
 version = "0.1.0"
 dependencies = [
  "anyhow",
