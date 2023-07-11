@@ -1,5 +1,5 @@
-use std::process;
 use colored::Colorize;
+use std::process;
 
 mod it;
 

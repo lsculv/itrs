@@ -3,7 +3,8 @@ use std::fs::File;
 use std::io::{self, stdout, BufRead, BufReader, BufWriter, Write};
 use std::str::FromStr;
 
-use clap::{Arg, Command};
+use clap::{Arg, ColorChoice, Command};
+use colored::control::SHOULD_COLORIZE;
 use itertools::Itertools;
 use thiserror::Error;
 
@@ -66,7 +67,11 @@ struct IterToolEnumParseError {
 
 impl fmt::Display for IterToolEnumParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "Attempted to parse \"{}\" as an IterTool variant.", self.attempted)?;
+        writeln!(
+            f,
+            "Attempted to parse \"{}\" as an IterTool variant.",
+            self.attempted
+        )?;
         write!(f, "       This likely means this variant was added as a clap subcommand but not to the `from_str` implementation of IterTool")?;
         Ok(())
     }
@@ -87,7 +92,9 @@ impl FromStr for IterTool {
             // This Err should never be reached in a release version as clap
             // should exclude invalid subcommands at the args parsing step.
             // The only exception is in the case specified by IterToolEnumParseError.
-            _ => Err(IterToolEnumParseError { attempted: s.to_owned() }),
+            _ => Err(IterToolEnumParseError {
+                attempted: s.to_owned(),
+            }),
         }
     }
 }
@@ -171,6 +178,11 @@ pub fn parse_args() -> anyhow::Result<Config> {
         .author("Lucas Culverhouse")
         .about("Provides command-line access to several useful Rust iterator and string methods")
         .subcommand_required(true)
+        .color(if SHOULD_COLORIZE.should_colorize() {
+            ColorChoice::Auto
+        } else {
+            ColorChoice::Never
+        })
         .arg(
             Arg::new("files")
                 .value_name("FILE")
@@ -198,8 +210,7 @@ pub fn parse_args() -> anyhow::Result<Config> {
         .cloned()
         .collect();
 
-    let command: IterTool =
-        IterTool::from_str(subcommand)?;
+    let command: IterTool = IterTool::from_str(subcommand)?;
 
     Ok(Config { files, command })
 }
