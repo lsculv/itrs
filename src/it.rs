@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::{self, stdout, BufRead, BufReader, BufWriter, Write};
 use std::str::FromStr;
 
-use clap::{Arg, ColorChoice, Command};
+use clap::{crate_version, Arg, ColorChoice, Command};
 use colored::control::SHOULD_COLORIZE;
 use itertools::Itertools;
 use thiserror::Error;
@@ -174,7 +174,7 @@ pub struct Config {
 
 pub fn parse_args() -> anyhow::Result<Config> {
     let matches = Command::new("it")
-        .version("0.1.0")
+        .version(crate_version!())
         .author("Lucas Culverhouse")
         .about("Provides command-line access to several useful Rust iterator and string methods")
         .subcommand_required(true)
@@ -191,13 +191,38 @@ pub fn parse_args() -> anyhow::Result<Config> {
                 .num_args(1..)
                 .global(true),
         )
-        .subcommand(Command::new("trim"))
-        .subcommand(Command::new("trim_start").visible_aliases(["trim_left", "triml"]))
-        .subcommand(Command::new("trim_end").visible_aliases(["trim_right", "trimr"]))
-        .subcommand(Command::new("to_uppercase").visible_aliases(["upper", "uppercase"]))
-        .subcommand(Command::new("to_lowercase").visible_aliases(["lower", "lowercase"]))
-        .subcommand(Command::new("unique").visible_alias("uniq"))
-        .subcommand(Command::new("sum"))
+        .subcommand(
+            Command::new("trim").about("Removes leading and trailing whitespace from each line of the input. Does not remove newlines.")
+        )
+        .subcommand(
+            Command::new("trim_start")
+            .about("Removes leading whitespace from each line of the input. Does not remove newlines.")
+            .visible_aliases(["trim_left", "triml"])
+        )
+        .subcommand(
+            Command::new("trim_end")
+                    .about("Removes trailing whitespace from each line of the input. Does not remove newlines.")
+                    .visible_aliases(["trim_right", "trimr"])
+        )
+        .subcommand(
+            Command::new("to_uppercase")
+                    .about("Converts input to uppercase.")
+                    .visible_aliases(["upper", "uppercase"])
+        )
+        .subcommand(
+            Command::new("to_lowercase")
+                    .about("Converts input to uppercase.")
+                    .visible_aliases(["lower", "lowercase"])
+        )
+        .subcommand(
+            Command::new("unique")
+                    .visible_alias("uniq")
+                    .about("Returns only the unique lines of the input.")
+        )
+        .subcommand(
+            Command::new("sum")
+                    .about("Returns the numeric sum of the lines of the input. Will fail if the lines are not exclusively numbers.")
+        )
         .get_matches();
 
     let (subcommand, subargs) = matches
