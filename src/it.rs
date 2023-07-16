@@ -172,8 +172,8 @@ pub struct Config {
     command: IterTool,
 }
 
-pub fn parse_args() -> anyhow::Result<Config> {
-    let matches = Command::new("it")
+pub fn build_command() -> Command {
+    Command::new("it")
         .version(crate_version!())
         .author("Lucas Culverhouse")
         .about("Provides command-line access to several useful Rust iterator and string methods")
@@ -223,7 +223,14 @@ pub fn parse_args() -> anyhow::Result<Config> {
             Command::new("sum")
                     .about("Returns the numeric sum of the lines of the input. Will fail if the lines are not exclusively numbers.")
         )
-        .get_matches();
+        .arg(
+            Arg::new("test1")
+            .requires("undef")
+            )
+}
+
+pub fn parse_args() -> anyhow::Result<Config> {
+    let matches = build_command().get_matches();
 
     let (subcommand, subargs) = matches
         .subcommand()
@@ -238,4 +245,9 @@ pub fn parse_args() -> anyhow::Result<Config> {
     let command: IterTool = IterTool::from_str(subcommand)?;
 
     Ok(Config { files, command })
+}
+
+#[test]
+fn verify_cli() {
+    build_command().debug_assert();
 }
