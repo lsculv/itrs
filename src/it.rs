@@ -4,7 +4,7 @@ use std::io::{self, stdout, BufRead, BufReader, BufWriter, Write};
 use std::str::FromStr;
 
 use clap::{crate_version, Arg, ColorChoice, Command};
-use colored::control::SHOULD_COLORIZE;
+use colored::{Colorize, control::SHOULD_COLORIZE};
 use itertools::Itertools;
 use thiserror::Error;
 
@@ -183,13 +183,15 @@ pub fn build_command() -> Command {
         } else {
             ColorChoice::Never
         })
+        .override_usage(format!("{} <COMMAND> [FILE]...", "it".bold()))
         .arg(
             Arg::new("files")
                 .value_name("FILE")
                 .help("Input file(s)")
                 .default_value("-")
                 .num_args(1..)
-                .global(true),
+                .global(true)
+                .hide_default_value(true)
         )
         .subcommand(
             Command::new("trim").about("Removes leading and trailing whitespace from each line of the input. Does not remove newlines.")
@@ -223,10 +225,6 @@ pub fn build_command() -> Command {
             Command::new("sum")
                     .about("Returns the numeric sum of the lines of the input. Will fail if the lines are not exclusively numbers.")
         )
-        .arg(
-            Arg::new("test1")
-            .requires("undef")
-            )
 }
 
 pub fn parse_args() -> anyhow::Result<Config> {
