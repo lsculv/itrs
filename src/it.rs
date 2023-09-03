@@ -100,14 +100,6 @@ impl FromStr for IterTool {
 }
 
 pub fn run(config: Config) -> anyhow::Result<()> {
-    #[inline(always)]
-    fn make_reader(path: &str) -> anyhow::Result<Box<dyn BufRead>> {
-        match path {
-            "-" => Ok(Box::new(BufReader::new(io::stdin().lock()))),
-            _ => Ok(Box::new(BufReader::new(File::open(path)?))),
-        }
-    }
-
     let mut readers: Vec<Box<dyn BufRead>> = Vec::with_capacity(config.files.len());
     for file in config.files {
         match make_reader(&file) {
@@ -124,6 +116,18 @@ pub fn run(config: Config) -> anyhow::Result<()> {
     } else {
         apply_to_entire(readers, command)?;
     }
+
+    return Ok(());
+
+    // internal functions
+    #[inline(always)]
+    fn make_reader(path: &str) -> anyhow::Result<Box<dyn BufRead>> {
+        match path {
+            "-" => Ok(Box::new(BufReader::new(io::stdin().lock()))),
+            _ => Ok(Box::new(BufReader::new(File::open(path)?))),
+        }
+    }
+
 
     #[inline(always)]
     fn apply_by_lines(readers: Vec<Box<dyn BufRead>>, command: IterTool) -> anyhow::Result<()> {
@@ -162,8 +166,6 @@ pub fn run(config: Config) -> anyhow::Result<()> {
 
         Ok(())
     }
-
-    Ok(())
 }
 
 #[derive(Debug)]
