@@ -1,7 +1,7 @@
 [package]
 name = "itrs"
 authors = ["Lucas Culverhouse <lucasculverhouse@gmail.com>"]
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 rust-version = "1.70"
 homepage = "https://github.com/lsculv/itrs"
@@ -20,7 +20,7 @@ itertools = "0.11.0"
 thiserror = "1.0.43"
 
 [profile.release]
-debug = true
+strip = true
 lto = true
 
 [[bin]]
